@@ -1,3 +1,38 @@
 ---
-- include_tasks: "{{ role_path }}/tasks/setup.yml"
-  when: "app_uptime_kuma_enabled|bool"
+- name: Create uptime-kuma data volume
+  community.docker.docker_volume:
+    name: uptime-kuma_data
+
+- name: Ensure louislam/uptime-kuma image is pulled
+  community.docker.docker_image:
+    name: docker.io/louislam/uptime-kuma
+    source: pull
+    force_source: yes
+  register: pulled
+
+- name: Remove uptime-kuma container
+  community.docker.docker_container:
+    name: uptime-kuma
+    state: absent
+  when: pulled.changed
+
+- name: Get infos on uptime-kuma container
+  community.docker.docker_container_info:
+    name: uptime-kuma
+  register: result
+
+- name: Create uptime-kuma container
+  community.docker.docker_container:
+    image: docker.io/louislam/uptime-kuma
+    mounts:
+     - source: uptime-kuma_data
+       target: /app/data
+    name: uptime-kuma
+    networks:
+     - name: app-network
+    restart_policy: unless-stopped
+    state: started
+  when:
+    pulled.changed
+    or
+    result.exists == false
