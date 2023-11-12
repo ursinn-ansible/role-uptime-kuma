@@ -33,6 +33,18 @@
     restart_policy: unless-stopped
     state: started
   when:
-    pulled.changed
-    or
-    result.exists == false
+    (pulled.changed or result.exists == false) and app_uptime_kuma_cloudflared_token == ""
+
+- name: Create uptime-kuma container with cf reverse proxy
+  community.docker.docker_container:
+    image: docker.io/louislam/uptime-kuma
+    mounts:
+     - source: uptime-kuma_data
+       target: /app/data
+    name: uptime-kuma
+    env:
+      UPTIME_KUMA_CLOUDFLARED_TOKEN: "{{ app_uptime_kuma_cloudflared_token }}"
+    restart_policy: unless-stopped
+    state: started
+  when:
+    (pulled.changed or result.exists == false) and app_uptime_kuma_cloudflared_token != ""
