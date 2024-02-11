@@ -1,35 +1,35 @@
 ---
 - name: Create uptime-kuma data volume
   community.docker.docker_volume:
-    name: uptime-kuma_data
+    name: "{{ app_uptime_kuma_docker_volume }}"
 
-- name: Ensure louislam/uptime-kuma image is pulled
+- name: Ensure uptime-kuma image is pulled
   community.docker.docker_image:
-    name: docker.io/louislam/uptime-kuma
+    name: "{{ app_uptime_kuma_docker_image }}"
     source: pull
     force_source: yes
   register: pulled
 
 - name: Remove uptime-kuma container
   community.docker.docker_container:
-    name: uptime-kuma
+    name: "{{ app_uptime_kuma_docker_container }}"
     state: absent
   when: pulled.changed
 
 - name: Get infos on uptime-kuma container
   community.docker.docker_container_info:
-    name: uptime-kuma
+    name: "{{ app_uptime_kuma_docker_container }}"
   register: result
 
 - name: Create uptime-kuma container
   community.docker.docker_container:
-    image: docker.io/louislam/uptime-kuma
+    image: "{{ app_uptime_kuma_docker_image }}"
     mounts:
-     - source: uptime-kuma_data
+     - source: "{{ app_uptime_kuma_docker_volume }}"
        target: /app/data
-    name: uptime-kuma
+    name: "{{ app_uptime_kuma_docker_container }}"
     networks:
-     - name: app-network
+     - name: "{{ app_uptime_kuma_docker_network }}"
     restart_policy: unless-stopped
     state: started
   when:
@@ -37,11 +37,11 @@
 
 - name: Create uptime-kuma container with cf reverse proxy
   community.docker.docker_container:
-    image: docker.io/louislam/uptime-kuma
+    image: "{{ app_uptime_kuma_docker_image }}"
     mounts:
-     - source: uptime-kuma_data
+     - source: "{{ app_uptime_kuma_docker_volume }}"
        target: /app/data
-    name: uptime-kuma
+    name: "{{ app_uptime_kuma_docker_container }}"
     env:
       UPTIME_KUMA_CLOUDFLARED_TOKEN: "{{ app_uptime_kuma_cloudflared_token }}"
     restart_policy: unless-stopped
