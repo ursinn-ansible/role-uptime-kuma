@@ -1,35 +1,48 @@
 ---
-- name: Create uptime-kuma data volume
-  community.docker.docker_volume:
-    name: "{{ app_uptime_kuma_docker_volume }}"
+- name: set vars
+  set_fact:
+    docker_image: '{{ app_uptime_kuma_docker_image }}'
+    docker_container: '{{ app_uptime_kuma_docker_container }}'
+    docker_volume: '{{ app_uptime_kuma_docker_volume }}'
+    docker_network: '{{ app_uptime_kuma_docker_network }}'
 
-- name: Ensure uptime-kuma image is pulled
+- name: Ensure image is pulled
   community.docker.docker_image:
-    name: "{{ app_uptime_kuma_docker_image }}"
+    name: "{{ docker_image }}"
     source: pull
     force_source: yes
   register: pulled
 
-- name: Remove uptime-kuma container
+- name: Remove container
   community.docker.docker_container:
-    name: "{{ app_uptime_kuma_docker_container }}"
+    name: "{{ docker_container }}"
     state: absent
   when: pulled.changed
 
-- name: Get infos on uptime-kuma container
+- name: Get infos on container
   community.docker.docker_container_info:
-    name: "{{ app_uptime_kuma_docker_container }}"
+    name: "{{ docker_container }}"
   register: result
+
+- name: Create volume
+  community.docker.docker_volume:
+    name: "{{ docker_volume }}"
+
+- name: Create network
+  community.docker.docker_network:
+    name: "{{ docker_network }}"
+    driver_options:
+          com.docker.network.bridge.name: "br-{{ docker_network }}"
 
 - name: Create uptime-kuma container
   community.docker.docker_container:
-    image: "{{ app_uptime_kuma_docker_image }}"
+    image: "{{ docker_image }}"
     mounts:
-     - source: "{{ app_uptime_kuma_docker_volume }}"
+     - source: "{{ docker_volume }}"
        target: /app/data
-    name: "{{ app_uptime_kuma_docker_container }}"
+    name: "{{ docker_container }}"
     networks:
-     - name: "{{ app_uptime_kuma_docker_network }}"
+     - name: "{{ docker_network }}"
     restart_policy: unless-stopped
     state: started
   when:
@@ -37,11 +50,11 @@
 
 - name: Create uptime-kuma container with cf reverse proxy
   community.docker.docker_container:
-    image: "{{ app_uptime_kuma_docker_image }}"
+    image: "{{ docker_image }}"
     mounts:
-     - source: "{{ app_uptime_kuma_docker_volume }}"
+     - source: "{{ docker_volume }}"
        target: /app/data
-    name: "{{ app_uptime_kuma_docker_container }}"
+    name: "{{ docker_container }}"
     env:
       UPTIME_KUMA_CLOUDFLARED_TOKEN: "{{ app_uptime_kuma_cloudflared_token }}"
     restart_policy: unless-stopped
